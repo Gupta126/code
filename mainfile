@@ -1,0 +1,584 @@
+package com.letsnurture.mantra;
+
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+
+import android.app.ActionBar;
+import android.app.AlertDialog;
+import android.app.Dialog;
+import android.appwidget.AppWidgetManager;
+import android.content.DialogInterface;
+import android.content.Intent;
+import android.graphics.Bitmap;
+import android.graphics.Typeface;
+import android.graphics.drawable.BitmapDrawable;
+import android.graphics.drawable.Drawable;
+import android.media.MediaPlayer;
+import android.media.MediaPlayer.OnCompletionListener;
+import android.net.Uri;
+import android.os.Bundle;
+import android.os.Environment;
+import android.provider.MediaStore.Images;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.View.OnClickListener;
+import android.view.Window;
+import android.widget.Button;
+import android.widget.EditText;
+import android.widget.ImageButton;
+import android.widget.ImageView;
+import android.widget.RelativeLayout;
+import android.widget.TextView;
+import android.widget.Toast;
+
+public class PlayView extends CollectionClass{
+	TextView tvMantra;
+	TextView tvCount;
+	ImageView iv;
+	ImageView ivSlock;
+	RelativeLayout rl;
+	ImageButton bPlay;
+    int imageresource;
+	ImageButton bStop;
+	Button bmore;
+	ImageButton download;
+	ImageButton wallpaper;
+	Button btnInfo;
+	Button b1,b2,b3,b4,b5;
+	String play = "Play";
+	@Override
+	public void onCreate(Bundle savedInstanceState) {
+		
+		super.onCreate(savedInstanceState);
+		requestWindowFeature(Window.FEATURE_NO_TITLE);
+//	    getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,WindowManager.LayoutParams.FLAG_FULLSCREEN);
+		setContentView(R.layout.playview);
+		
+		tvMantra = (TextView) findViewById(R.id.textMantraName);
+		iv = (ImageView) findViewById(R.id.imageView1);
+		ivSlock = (ImageView) findViewById(R.id.imageSlock);
+		tvCount = (TextView) findViewById(R.id.textCount);
+		//bPlay = (Button) findViewById(R.id.buttonPlay);
+		//bStop = (Button) findViewById(R.id.buttonStop);
+		bmore = (Button) findViewById(R.id.buttonMore);
+		b1 = (Button) findViewById(R.id.button1);
+		rl=(RelativeLayout) findViewById(R.id.mantrascreenshot);
+		b2 = (Button) findViewById(R.id.button2);
+		b3 = (Button) findViewById(R.id.button3);
+		b4 = (Button) findViewById(R.id.button4);
+		b5 = (Button) findViewById(R.id.button5);
+		btnInfo = (Button) findViewById(R.id.Button_info);
+		Toast.makeText(getApplicationContext(), "Tap on image to Download or Share Wallpaper", Toast.LENGTH_SHORT).show();
+		Typeface rt=Typeface.createFromAsset(getAssets(),"font/Carleton.ttf");
+		tvMantra.setTypeface(rt);
+		tvCount.setTypeface(rt);
+		
+		
+		ActionBar _mantraplay = getActionBar();
+
+		
+		LayoutInflater li = getLayoutInflater();
+	    View v = li.inflate(R.layout.actionbarview, null);
+		//Application ac = getApplication();
+		
+		
+		
+		bPlay = (ImageButton)v.findViewById(R.id.buttonPlay);
+		bStop = (ImageButton)v.findViewById(R.id.buttonStop);
+		
+		_mantraplay.setCustomView(v);
+		_mantraplay.setDisplayOptions(ActionBar.DISPLAY_SHOW_CUSTOM);
+		if(PublicClass.oldposition != PublicClass.position)
+		{
+			PublicClass.count = 0;
+			PublicClass.Total = 0;
+		}
+		try
+		{
+			if(!PublicClass.mpl.isPlaying())
+			{
+				PublicClass.mpl = MediaPlayer.create(PlayView.this, PublicClass.ListMantra[PublicClass.position]);
+			}
+			else
+			{
+				tvCount.setText(PublicClass.count + "/" + PublicClass.Total);
+				bPlay.setBackgroundResource(R.drawable.push);
+			}
+		}
+		catch (Exception e) {
+			PublicClass.mpl = MediaPlayer.create(PlayView.this, PublicClass.ListMantra[PublicClass.position]);
+		}
+		tvMantra.setText(PublicClass.ListCat[PublicClass.position]);
+		iv.setImageResource(PublicClass.ListImg[PublicClass.position]);
+		
+		if(getResources().getDisplayMetrics().density==0.75)
+        {
+			btnInfo.setVisibility(View.GONE);
+			
+			Toast.makeText(getApplicationContext(), 
+					"To view the description, Please click the main Image of God.",
+					Toast.LENGTH_LONG).show();
+			
+			iv.setOnClickListener(new OnClickListener() {
+				
+				public void onClick(View arg0) {
+					showEnglishInfo();
+				}
+			});
+        }
+		else
+		{
+			btnInfo.setVisibility(View.VISIBLE);
+			btnInfo.setOnClickListener(new OnClickListener()
+			{
+				public void onClick(View v)
+				{
+					showEnglishInfo();
+				}
+			});
+		}
+        iv.setOnClickListener(new OnClickListener()
+        {
+			public void onClick(View v)
+			{
+				// set up dialog
+				final Dialog dialog = new Dialog(PlayView.this,android.R.style.Theme_Translucent_NoTitleBar);
+				dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
+				dialog.setContentView(R.layout.custom_dialog1);
+				dialog.setCancelable(true);
+				dialog.show();
+				final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
+				
+				Runnable hideDialog= new Runnable()
+				{
+				    public void run()
+				    {
+				       dialog.dismiss();
+				    }
+				};
+	            imageresource=PublicClass.ListImg[PublicClass.position];
+				executor.schedule(hideDialog, 5, TimeUnit.SECONDS);
+				download=(ImageButton)dialog.findViewById(R.id.download);
+				wallpaper=(ImageButton)dialog.findViewById(R.id.wallpaper);
+				Drawable drawable = getResources().getDrawable(imageresource);
+				final Bitmap bm = ((BitmapDrawable)drawable).getBitmap();
+				
+				download.setOnClickListener(new OnClickListener() 
+				{
+					public void onClick(View v) 
+					{
+						dialog.dismiss();
+						OutputStream outStream = null;
+						String extStorageDirectory = Environment.getExternalStorageDirectory().toString();
+						File file = new File(extStorageDirectory, "Mataji-" + imageresource + ".png");
+						try 
+						{
+						    outStream = new FileOutputStream(file);
+						    bm.compress(Bitmap.CompressFormat.PNG, 100, outStream);
+						    outStream.flush();
+						    outStream.close();
+						    Toast.makeText(PlayView.this, "Image Downloaded.", Toast.LENGTH_LONG).show();
+						}
+						catch (FileNotFoundException e) 
+						{
+							e.printStackTrace();
+						}
+						catch (Exception e) 
+						{
+						    e.printStackTrace();
+						}
+
+					}
+				});
+				wallpaper.setOnClickListener(new OnClickListener()
+				{
+					public void onClick(View v) 
+					{
+						dialog.dismiss();
+						Intent intent = null;
+						intent = new Intent(Intent.ACTION_SEND);
+						intent.setType("*/*");
+						ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+						bm.compress(Bitmap.CompressFormat.JPEG, 100, bytes);
+						File f = new File(Environment.getExternalStorageDirectory() + File.separator + "temporary_file.jpg");
+						try 
+						{
+						    f.createNewFile();
+						    FileOutputStream fo = new FileOutputStream(f);
+						    fo.write(bytes.toByteArray());
+						} 
+						catch (IOException e) 
+						{                       
+						        e.printStackTrace();
+						}
+						
+						intent.putExtra(Intent.EXTRA_TEXT, "#Mantra WallPaper");
+						intent.putExtra(Intent.EXTRA_STREAM, Uri.parse("file:///sdcard/temporary_file.jpg"));
+						startActivity(Intent.createChooser(intent,"Share Using:"));
+					}
+				});
+			}
+		});
+		
+//		final Dialog d = new Dialog(PlayView.this);
+		
+		ivSlock.setImageResource(PublicClass.ListSlock[PublicClass.position]);
+		bmore.setOnClickListener(new OnClickListener() {
+			
+			public void onClick(View v) {
+				ShowDialog();
+			}
+		});
+		PublicClass.mpl.setOnCompletionListener(new OnCompletionListener() {
+				public void onCompletion(MediaPlayer mp) {
+					final int totcount = PublicClass.Total;
+					if(PublicClass.count < PublicClass.Total)
+					{
+						PublicClass.count ++;
+						String str = "" + PublicClass.count + "/" + PublicClass.Total;
+						tvCount.setText( str);
+						PublicClass.mpl.start();
+						startTheService();
+					}
+					else
+					{
+						startTheService();
+						PublicClass.count = 0;
+						PublicClass.Total = 0;
+						try {
+								dialog(PublicClass.ListCat[PublicClass.position], totcount+"");
+						} catch (Exception e2) {
+							e2.printStackTrace();
+						}
+					}
+				}
+			});
+		bPlay.setOnClickListener(new OnClickListener() {
+			public void onClick(View v) {
+				if(play == "Play" && PublicClass.count != 0 && PublicClass.Total != 0)
+				{
+					PublicClass.mpl.start();
+					startTheService();
+					tvCount.setText( PublicClass.count + "/" + PublicClass.Total);
+					bPlay.setBackgroundResource(R.drawable.push);
+					play = "Pause";
+				}
+				else if(play != "Play")
+				{
+					PublicClass.mpl.pause();
+					startTheService();
+					bPlay.setBackgroundResource(R.drawable.play);
+					play = "Play";
+				}
+			}
+		});
+		bStop.setOnClickListener(new OnClickListener() {
+			public void onClick(View v) {
+				if(PublicClass.count != 0 && PublicClass.Total != 0)
+				{
+					PublicClass.mpl.stop();
+					PublicClass.count = 0;
+					PublicClass.Total = 0;
+					tvCount.setText("");
+					bPlay.setBackgroundResource(R.drawable.play);
+					startTheService();
+					play = "Play";
+				}
+				else if(play != "Play")
+				{
+					PublicClass.mpl.pause();
+					startTheService();
+					bPlay.setBackgroundResource(R.drawable.play);
+					play = "Play";
+				}
+			}
+		});
+		b1.setOnClickListener(new OnClickListener() {
+			
+			public void onClick(View v) {
+				CheckPlay(1);
+			}
+		});
+		b2.setOnClickListener(new OnClickListener() {
+			
+			public void onClick(View v) {
+				CheckPlay(11);
+			}
+		});
+		b3.setOnClickListener(new OnClickListener() {
+			
+			public void onClick(View v) {
+				CheckPlay(21);
+			}
+		});
+		b4.setOnClickListener(new OnClickListener() {
+			
+			public void onClick(View v) {
+				CheckPlay(108);
+				
+			}
+		});
+		b5.setOnClickListener(new OnClickListener() {
+			
+			public void onClick(View v) {
+				CheckPlay(1001);
+			}
+		});
+	}
+	
+	@Override
+	public void onBackPressed() {
+		PublicClass.oldposition = PublicClass.position;
+		super.onBackPressed();
+	}
+
+	public void ShowDialog()
+	{
+		final Dialog dialog = new Dialog(PlayView.this,android.R.style.Theme_Translucent_NoTitleBar);
+		dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
+		dialog.setContentView(R.layout.custom_dialog);
+		dialog.setCancelable(false);
+		dialog.show();
+		Button btnOk=(Button)dialog.findViewById(R.id.buttonOk);
+		Button btnBack=(Button)dialog.findViewById(R.id.buttonBack);
+		final EditText et = (EditText) dialog.findViewById(R.id.editTextCount);
+		btnOk.setOnClickListener(new OnClickListener() 
+		{
+			public void onClick(View v) 
+			{
+			
+				if(!et.getText().toString().equals("") && et.getText().length() < 6)
+				{
+					if(Long.parseLong(et.getText().toString())<=11111 && Long.parseLong(et.getText().toString())>0)
+					{
+						PublicClass.Total =Integer.parseInt(et.getText().toString());
+						if(PublicClass.Total != 0)
+						{
+							dialog.dismiss();
+							CheckPlay(PublicClass.Total);
+						}
+					}
+					else
+					{
+						Toast.makeText(getApplicationContext(), "This is not Valid Value.", Toast.LENGTH_SHORT).show();
+					}
+				}
+				else
+				{
+					Toast.makeText(getApplicationContext(), "This is not Valid Value.", Toast.LENGTH_SHORT).show();
+				}
+			
+			}
+		});
+		btnBack.setOnClickListener(new OnClickListener() 
+		{
+			public void onClick(View v) 
+			{
+				dialog.dismiss();
+			}
+		});
+	}
+	public void CheckPlay(final int total)
+	{
+		try
+		{
+			if(PublicClass.mpl.isPlaying())
+			{
+				new AlertDialog.Builder(PlayView.this).setMessage("Change Mantra Count ?")
+		        .setTitle("Play.....")
+		        .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
+		             public void onClick(DialogInterface dialog, int which) {  
+		            	PublicClass.Total = total;
+			 			PublicClass.count = 1;
+			 			PublicClass.mpl.release();
+			 			PublicClass.mpl = MediaPlayer.create(PlayView.this, PublicClass.ListMantra[PublicClass.position]);
+			 			PublicClass.mpl.start();
+			 			startTheService();
+			 			PublicClass.mpl.setOnCompletionListener(new OnCompletionListener() {
+		 					public void onCompletion(MediaPlayer mp) {
+		 						if(PublicClass.count < PublicClass.Total)
+		 						{
+		 							PublicClass.count ++;
+		 							String str = "" + PublicClass.count + "/" + PublicClass.Total;
+		 							tvCount.setText( str);
+		 							PublicClass.mpl.start();
+		 							startTheService();
+		 						}
+		 						else
+		 						{
+		 							startTheService();
+		 							PublicClass.count = 0;
+		 							PublicClass.Total = 0;
+		 							try {
+		 								dialog(PublicClass.ListCat[PublicClass.position], total+"");
+									} catch (Exception e2) {
+										e2.printStackTrace();
+									}
+		 						}
+		 					}
+		 				});
+			 			tvCount.setText( PublicClass.count + "/" + PublicClass.Total);
+			 			bPlay.setBackgroundResource(R.drawable.push);
+			 			play = "Pause";
+		             }
+		        })
+		        .setNegativeButton("No", new DialogInterface.OnClickListener() {
+		             public void onClick(DialogInterface dialog, int which) { 
+		            	 
+		             }
+		        })
+		        .show();
+			}
+			else
+			{
+				PublicClass.Total = total;
+ 				PublicClass.count = 1;
+ 				PublicClass.mpl.release();
+	 			PublicClass.mpl = MediaPlayer.create(PlayView.this, PublicClass.ListMantra[PublicClass.position]);
+ 				PublicClass.mpl.start();
+ 				tvCount.setText(  PublicClass.count + "/" + PublicClass.Total);
+ 				bPlay.setBackgroundResource(R.drawable.push);
+ 				play = "Pause";
+ 				PublicClass.mpl.setOnCompletionListener(new OnCompletionListener() {
+ 					public void onCompletion(MediaPlayer mp) {
+ 						if(PublicClass.count < PublicClass.Total)
+ 						{
+ 							PublicClass.count ++;
+ 							String str = "" + PublicClass.count + "/" + PublicClass.Total;
+ 							tvCount.setText( str);
+ 							PublicClass.mpl.start();
+ 							startTheService();
+ 						}
+ 						else
+ 						{
+// 							finish();
+ 							startTheService();
+ 							PublicClass.count = 0;
+ 							PublicClass.Total = 0;
+ 							try {
+ 								dialog(PublicClass.ListCat[PublicClass.position], total+"");
+							} catch (Exception e2) {
+								e2.printStackTrace();
+							}
+ 						}
+ 					}
+ 				});
+			}
+		}
+		catch (Exception e) {
+				PublicClass.Total = total;
+				PublicClass.count = 1;
+				PublicClass.mpl.start();
+				tvCount.setText(  PublicClass.count + "/" + PublicClass.Total);
+				bPlay.setBackgroundResource(R.drawable.push);
+				play = "Pause";
+				PublicClass.mpl.setOnCompletionListener(new OnCompletionListener() {
+ 					public void onCompletion(MediaPlayer mp) {
+ 						if(PublicClass.count < PublicClass.Total)
+ 						{
+ 							PublicClass.count ++;
+ 							String str = "" + PublicClass.count + "/" + PublicClass.Total;
+ 							tvCount.setText( str);
+ 							PublicClass.mpl.start();
+ 							startTheService();
+ 						}
+ 						else
+ 						{
+// 							finish();
+ 							startTheService();
+ 							PublicClass.count = 0;
+ 							PublicClass.Total = 0;
+ 							try {
+ 								dialog(PublicClass.ListCat[PublicClass.position], total+"");
+							} catch (Exception e2) {
+								e2.printStackTrace();
+							}
+ 						}
+ 					}
+ 				});
+		}
+		startTheService();
+	}
+	 public void startTheService(){
+	    	if(Widgetclass.appid == null) {
+	    		return;
+	    	}
+	    	Intent serviceIntent = new Intent(this, UpdateServices.class);
+	    	serviceIntent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, 
+	    			Widgetclass.appid);
+	    	this.startService(serviceIntent);
+	    }
+	 
+	 public void showEnglishInfo()
+	 {
+		// custom dialog
+			final Dialog dialog = new Dialog(PlayView.this,android.R.style.Theme_Translucent_NoTitleBar);
+			dialog.setContentView(R.layout.eng_custom_dialog);
+			
+			// set the custom dialog components - text, image and button
+			TextView textTitle = (TextView) dialog.findViewById(R.id.TextTitle);
+			TextView text = (TextView) dialog.findViewById(R.id.text);
+			Button dialogButtonOK = (Button) dialog.findViewById(R.id.dialogButtonOK);
+			Button dialogButtonShare = (Button) dialog.findViewById(R.id.dialogButtonShare);
+			textTitle.setText(PublicClass.ListCat[PublicClass.position]);
+			text.setText(PublicClass.ListMantraMeaning[PublicClass.position]);
+			
+			Typeface t = Typeface.createFromAsset(getAssets(),"font/georgia.ttf");
+			textTitle.setTypeface(t);
+			text.setTypeface(t);
+			dialogButtonOK.setTypeface(t);
+			dialogButtonShare.setTypeface(t);
+			
+			dialogButtonShare.setOnClickListener(new OnClickListener()
+			{
+				public void onClick(View vm)
+				{
+					View v = rl;
+					v.setDrawingCacheEnabled(true);
+					Bitmap b = v.getDrawingCache();
+					try {
+						String path = Images.Media.insertImage(getContentResolver(), b,
+								"title", null);
+						Uri screenshotUri = Uri.parse(path);
+						final Intent emailIntent1 = new Intent(
+								android.content.Intent.ACTION_SEND);
+						emailIntent1.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+						emailIntent1.putExtra(Intent.EXTRA_STREAM, screenshotUri);
+						emailIntent1.putExtra(android.content.Intent.EXTRA_TEXT,
+								PublicClass.ListMantraMeaning[PublicClass.position]
+					            		+ System.getProperty("line.separator") 
+					            		+ "via http://goo.gl/k92qQ");
+						emailIntent1.setType("image/png");
+						startActivity(Intent.createChooser(emailIntent1,
+								"Send email using"));
+						dialog.dismiss();
+					} catch (Exception e) {
+						Toast.makeText(getApplicationContext(),
+								"Some Problem in Sharing.", Toast.LENGTH_LONG).show();
+					}
+					
+				}
+		
+				
+				
+			});
+			
+			// if button is clicked, close the custom dialog
+			dialogButtonOK.setOnClickListener(new OnClickListener()
+			{
+				public void onClick(View v)
+				{
+					dialog.dismiss();
+				}
+			});
+			dialog.show();
+	 }
+	 
+}
